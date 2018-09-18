@@ -1,0 +1,339 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ECharts</title>
+
+    <script src="/static/js/echarts.min.js"></script>
+    <script src=" static/js/jquery.min.js"></script>
+
+    <script src=" static/js/bootstrap.min.js"></script>
+    <script src=" static/js/bootstrap-datetimepicker.min.js"></script>
+
+    <link href=" static/css/bootstrap.min.css" rel="stylesheet" >
+    <link href=" static/css/datetimepicker.css" rel="stylesheet" >
+</head>
+<body>
+
+<div style="text-align: center;padding-top: 20px;">
+
+    <div class="input-append date form_datetime" style="margin:auto;display: inline;">
+        <label style="display: inline">选择开始时间：</label>
+        <input size="16" type="text" id="starttime" value="" readonly>
+        <span class="add-on"><i class="icon-th"></i></span>
+    </div>
+
+    <div class="input-append date form_datetime2" style="margin:auto;display: inline;padding-left:20px;">
+        <label style="display: inline">选择结束时间：</label>
+        <input size="16" type="text" id="endtime" value="" readonly>
+        <span class="add-on"><i class="icon-th"></i></span>
+    </div>
+    <button type="button" class="btn btn-info" style="margin-left:15px;" id="searchbtn">查询</button>
+</div>
+
+
+<div id="main" style="width: 100%;height:600px;"></div>
+
+
+<script type="text/javascript">
+    var myChart = echarts.init(document.getElementById('main'));
+    var timeData = {{ Datetime|safe }} ;
+    var mem_total = {{ mem_total|safe }};
+
+    var picker1 = $(".form_datetime").datetimepicker({
+        format: "yyyy-mm-dd ",
+        minView:2,
+        autoclose: true,
+        todayBtn: true,
+        startView: 'year',
+        pickerPosition: "bottom-left"
+    });
+    var picker2 = $(".form_datetime2").datetimepicker({
+        format: "yyyy-mm-dd ",
+        minView:2,
+        autoclose: true,
+        todayBtn: true,
+        startView: 'year',
+        pickerPosition: "bottom-left"
+    });
+    picker1.on('changeDate', function(env){
+        $(".form_datetime2").datetimepicker('setStartDate',env.date);
+    });
+    picker2.on('changeDate', function(env){
+        $(".form_datetime").datetimepicker('setEndDate',env.date);
+    });
+
+    timeData = timeData.map(function (str) {
+            return str.replace('2018-', '');
+        });
+    option = {
+        title: {
+            text: '内存性能图',
+            subtext: 'mbb-48 主机',
+            x: 'center'
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                animation: false
+            }
+        },
+        legend: {
+            data:['Used','Free','Share','Buff/Cache','Available'],
+            x: 'left'
+        },
+        // 图表工具
+        toolbox: {
+            feature: {
+                dataZoom: {
+                    yAxisIndex: 'none'
+                },
+                restore: {},
+                saveAsImage: {}
+            }
+        },
+        axisPointer: {
+            link: {xAxisIndex: 'all'}
+        },
+        dataZoom: [
+            {
+                show: true,
+                realtime: true,
+                bottom: '5%',
+                start: 30,
+                end: 70,
+                xAxisIndex: [0]
+            },{
+                type: 'inside',
+                realtime: true,
+                start: 30,
+                end: 70,
+                xAxisIndex: [0]
+            }],
+        // 画板
+        grid: [{
+            left: 40,
+            right: 40,
+            height: '60%'
+        }],
+        // x,y轴
+        xAxis : [
+            {
+                type : 'category',
+                boundaryGap : false,
+                axisLine: {onZero: true},
+                data: timeData
+            }
+        ],
+        yAxis : [
+            {
+                name : '内存使用量(M)',
+                type : 'value',
+                max : mem_total
+            }
+        ],
+        series : [
+            {
+                name:'Used',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Free',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Share',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Buff/Cache',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Available',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            }
+        ]
+    };
+
+    myChart.setOption(option);
+    myChart.showLoading();
+
+    $.get('/get_mem/').done(function(data){
+        myChart.hideLoading();
+
+        myChart.setOption({
+            series: [{
+                name: 'Used',
+                data: data.Used,
+            }, {
+                name: 'Free',
+                data: data.Free,
+            }, {
+                name: 'Share',
+                data: data.Share,
+            }, {
+                name: 'Buff/Cache',
+                data: data.Buff_Cache,
+            }, {
+                name: 'Available',
+                data: data.Available,
+            }]
+        })
+    });
+
+    $("#searchbtn").click(function(e){
+       var starttime = $('#starttime').val();
+       var endtime = $('#endtime').val();
+
+       myChart.showLoading();
+
+       $.get("/post_time/",{'starttime':starttime,'endtime':endtime},function(data){
+           timeData = data.Datetime ;
+           mem_total = data.mem_total;
+           timeData = timeData.map(function (str) {
+            return str.replace('2018-', '');
+        });
+           option = {
+        title: {
+            text: '内存性能图',
+            subtext: 'mbb-48 主机',
+            x: 'center'
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                animation: false
+            }
+        },
+        legend: {
+            data:['Used','Free','Share','Buff/Cache','Available'],
+            x: 'left'
+        },
+        // 图表工具
+        toolbox: {
+            feature: {
+                dataZoom: {
+                    yAxisIndex: 'none'
+                },
+                restore: {},
+                saveAsImage: {}
+            }
+        },
+        axisPointer: {
+            link: {xAxisIndex: 'all'}
+        },
+        dataZoom: [
+            {
+                show: true,
+                realtime: true,
+                bottom: '5%',
+                start: 30,
+                end: 70,
+                xAxisIndex: [0]
+            },{
+                type: 'inside',
+                realtime: true,
+                start: 30,
+                end: 70,
+                xAxisIndex: [0]
+            }],
+        // 画板
+        grid: [{
+            left: 40,
+            right: 40,
+            height: '60%'
+        }],
+        // x,y轴
+        xAxis : [
+            {
+                type : 'category',
+                boundaryGap : false,
+                axisLine: {onZero: true},
+                data: timeData
+            }
+        ],
+        yAxis : [
+            {
+                name : '内存使用量(M)',
+                type : 'value',
+                max : mem_total
+            }
+        ],
+        series : [
+            {
+                name:'Used',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Free',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Share',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Buff/Cache',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            },
+            {
+                name:'Available',
+                type:'line',
+                symbolSize: 8,
+                hoverAnimation: false,
+                data:[]
+            }
+        ]
+    };
+           myChart.setOption(option);
+           myChart.hideLoading();
+           myChart.setOption({
+            series: [{
+                name: 'Used',
+                data: data.Used,
+            }, {
+                name: 'Free',
+                data: data.Free,
+            }, {
+                name: 'Share',
+                data: data.Share,
+            }, {
+                name: 'Buff/Cache',
+                data: data.Buff_Cache,
+            }, {
+                name: 'Available',
+                data: data.Available,
+            }]
+        })
+       });
+    });
+</script>
+</body>

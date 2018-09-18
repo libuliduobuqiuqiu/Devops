@@ -1,0 +1,76 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ECharts</title>
+    <script src="/static/js/echarts.min.js"></script>
+    <script src=" static/js/jquery.js"></script>
+</head>
+<body>
+    <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('main'));
+        option = {
+            title: {
+            text: 'mbb-48 磁盘空间使用率',
+            subtext: '虚拟机数据',
+            left: 'center'
+            },
+            tooltip :{
+                trgger: 'axis',
+                formatter:function(params, ticket, callback)
+                {
+                    //判断以什么单位展示
+                    var a=0;
+                    if( params.value<1024)
+                    {
+                    return  params.name+":"+params.value+"K";
+                    }
+                   return  params.name+":"+(params.value/1024).toFixed(2)+"M";
+                }
+            },
+            legend: {
+                // orient: 'vertical',
+                // top: 'middle',
+                bottom: 10,
+                left: 'center',
+                data: []
+            },
+            series : [
+                {
+                    type: 'pie',
+                    radius : '65%',
+                    selectedMode: 'single',
+                    center: ['50%', '50%'],
+                    roseType: 'angle',
+                    data:[
+                    ],
+                    itemStyle: {
+                        emphasis: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+        myChart.setOption(option);
+        myChart.showLoading();
+        $.get('/get_chart/').done(function(data){
+            myChart.hideLoading();
+            myChart.setOption({
+                legend: {
+                    data: data.categories
+                },
+                series: [{
+                    data: data.data
+                }]
+
+            })
+        });
+
+    </script>
+</body>
+</html>
